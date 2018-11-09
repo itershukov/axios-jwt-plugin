@@ -1,8 +1,13 @@
 import axios from 'axios';
+import {IAsyncStorage} from 'universal-storage';
 
 const refreshTokenURL = '/api/refresh-token';
 
 let tokenUpdater: Promise<any> | null = null;
+
+interface IConfig {
+  storage: IAsyncStorage | Storage
+}
 
 enum tokenStatuses {
   expired = 10,
@@ -20,7 +25,7 @@ const refrefInstance = axios.create({
 
 let storage: any = null;
 
-export function init(config: any) {
+export function init(config: IConfig) {
   if (storage) {
     return;
   }
