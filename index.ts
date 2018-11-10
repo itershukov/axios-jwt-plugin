@@ -132,7 +132,7 @@ async function _refreshToken() {
 }
 
 export async function saveCreds(creds: any) {
-  if (!creds.access) {
+  if (!creds.access || creds.access.token) {
     return;
   }
   axios.defaults.headers.common['Authorization'] = `Bearer ${creds.access.token}`;
@@ -140,7 +140,7 @@ export async function saveCreds(creds: any) {
 }
 
 export async function clearCreds() {
-  axios.defaults.headers.common['Authorization'] = ``;
+  delete axios.defaults.headers.common['Authorization'];
   return await storage.setItem('creds', '');
 }
 
