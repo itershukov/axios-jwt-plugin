@@ -6,7 +6,7 @@ const refreshTokenURL = '/api/refresh-token';
 let tokenUpdater: Promise<any> | null = null;
 
 interface IConfig {
-  storage: IAsyncStorage | Storage
+  storage: IAsyncStorage
 }
 
 enum tokenStatuses {
@@ -23,9 +23,9 @@ const refrefInstance = axios.create({
   timeout: 1000
 });
 
-let storage: any = null;
+let storage: IAsyncStorage;
 
-export function init(config: IConfig) {
+export function configureAxiosJWTInterseptors(config: IConfig) {
   if (storage) {
     return;
   }
@@ -70,7 +70,6 @@ export function init(config: IConfig) {
     }
   );
 }
-
 
 async function _refreshTokenIfNeeded() {
   const { access, refresh } = await _getCreds();
