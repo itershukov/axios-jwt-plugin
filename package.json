@@ -1,6 +1,6 @@
 {
   "author": "itersh",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "axios-patch-jwt",
   "repository": {
     "type": "git",
@@ -14,6 +14,6 @@
   "description": "",
   "dependencies": {
     "axios": "^0.18.0",
-    "universal-storage": "git+https://github.com/itershukov/universal-storage"
+    "universal-storage": "git+https://github.com/itershukov/universal-storage.git"
   }
 }
