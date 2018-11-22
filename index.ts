@@ -1,12 +1,14 @@
-import axios from 'axios';
-import {IAsyncStorage} from 'universal-storage';
+import { IAsyncStorage } from 'universal-storage';
+import { AxiosStatic }  from 'axios';
 
 const refreshTokenURL = '/api/refresh-token';
 
 let tokenUpdater: Promise<any> | null = null;
 
 interface IConfig {
-  storage: IAsyncStorage
+  storage: IAsyncStorage,
+  axios: AxiosStatic,
+  refreshTokenURL?: string
 }
 
 enum tokenStatuses {
@@ -19,23 +21,30 @@ enum tokenStatuses {
 
 const PRE_REFRESH_PERIOD = 10;
 
-const refrefInstance = axios.create({
-  timeout: 1000
-});
+let refrefInstance: AxiosStatic;
 
 let storage: IAsyncStorage;
+let axios: AxiosStatic;
 
 export function configureAxiosJWTInterseptors(config: IConfig) {
-  if (storage) {
+
+  if (storage && axios) {
     return;
   }
 
   storage = config.storage;
+  axios = config.axios;
+  axios.create({
+    timeout: 1000
+  });
 
   axios.interceptors.request.use(
     async config => {
       await _refreshTokenIfNeeded();
-      config.headers['Authorization'] = axios.defaults.headers.common['Authorization'];
+      if (axios.defaults.headers.common['Authorization']){
+        config.headers['Authorization'] = axios.defaults.headers.common['Authorization'];
+      }
+
       return config;
     },
     error => {
@@ -131,9 +140,10 @@ async function _refreshToken() {
 }
 
 export async function saveCreds(creds: any) {
-  if (!creds.access || creds.access.token) {
+  if (!creds.access || !creds.access.token) {
     return;
   }
+
   axios.defaults.headers.common['Authorization'] = `Bearer ${creds.access.token}`;
   return await storage.setItem('creds', JSON.stringify(creds));
 }
