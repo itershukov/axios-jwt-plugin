@@ -1,5 +1,5 @@
 import { IAsyncStorage } from 'universal-storage';
-import { AxiosStatic }  from 'axios';
+import {AxiosInstance, AxiosStatic} from 'axios';
 
 const refreshTokenURL = '/api/refresh-token';
 
@@ -21,7 +21,7 @@ enum tokenStatuses {
 
 const PRE_REFRESH_PERIOD = 10;
 
-let refrefInstance: AxiosStatic;
+let refreshInstance: AxiosInstance;
 
 let storage: IAsyncStorage;
 let axios: AxiosStatic;
@@ -34,7 +34,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
 
   storage = config.storage;
   axios = config.axios;
-  axios.create({
+  refreshInstance = axios.create({
     timeout: 1000
   });
 
@@ -114,7 +114,7 @@ async function _refreshToken() {
   }
 
   if (!tokenUpdater) {
-    tokenUpdater = refrefInstance
+    tokenUpdater = refreshInstance
       .post(
         refreshTokenURL,
         {
@@ -163,5 +163,3 @@ async function _getCreds() {
     return {};
   }
 }
-
-export default axios;
