@@ -34,11 +34,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var axios_1 = __importDefault(require("axios"));
+exports.__esModule = true;
 var refreshTokenURL = '/api/refresh-token';
 var tokenUpdater = null;
 var tokenStatuses;
@@ -50,30 +46,35 @@ var tokenStatuses;
     tokenStatuses[tokenStatuses["badSignature"] = 14] = "badSignature";
 })(tokenStatuses || (tokenStatuses = {}));
 var PRE_REFRESH_PERIOD = 10;
-var refrefInstance = axios_1.default.create({
-    timeout: 1000
-});
-var storage = null;
-function init(config) {
+var refreshInstance;
+var storage;
+var axios;
+function configureAxiosJWTInterseptors(config) {
     var _this = this;
-    if (storage) {
+    if (storage && axios) {
         return;
     }
     storage = config.storage;
-    axios_1.default.interceptors.request.use(function (config) { return __awaiter(_this, void 0, void 0, function () {
+    axios = config.axios;
+    refreshInstance = axios.create({
+        timeout: 1000
+    });
+    axios.interceptors.request.use(function (conf) { return __awaiter(_this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, _refreshTokenIfNeeded()];
                 case 1:
                     _a.sent();
-                    config.headers['Authorization'] = axios_1.default.defaults.headers.common['Authorization'];
-                    return [2 /*return*/, config];
+                    if (axios.defaults.headers.common['Authorization']) {
+                        conf.headers['Authorization'] = axios.defaults.headers.common['Authorization'];
+                    }
+                    return [2 /*return*/, conf];
             }
         });
     }); }, function (error) {
         return Promise.reject(error);
     });
-    axios_1.default.interceptors.response.use(function (response) { return __awaiter(_this, void 0, void 0, function () {
+    axios.interceptors.response.use(function (response) { return __awaiter(_this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             return [2 /*return*/, response];
         });
@@ -97,7 +98,7 @@ function init(config) {
                     return [4 /*yield*/, _refreshToken()];
                 case 2:
                     _a.sent();
-                    return [2 /*return*/, axios_1.default(originalRequest)];
+                    return [2 /*return*/, axios(originalRequest)];
                 case 3:
                     e_1 = _a.sent();
                     console.error(e_1);
@@ -107,7 +108,7 @@ function init(config) {
         });
     }); });
 }
-exports.init = init;
+exports.configureAxiosJWTInterseptors = configureAxiosJWTInterseptors;
 function _refreshTokenIfNeeded() {
     return __awaiter(this, void 0, void 0, function () {
         var _a, access, refresh, now, _b, e_2;
@@ -121,7 +122,7 @@ function _refreshTokenIfNeeded() {
                     }
                     _c.label = 2;
                 case 2:
-                    _c.trys.push([2, 9, , 10]);
+                    _c.trys.push([2, 10, , 11]);
                     now = Date.now() / 1000;
                     _b = true;
                     switch (_b) {
@@ -132,22 +133,23 @@ function _refreshTokenIfNeeded() {
                     }
                     return [3 /*break*/, 8];
                 case 3:
-                    axios_1.default.defaults.headers.common['Authorization'] = "Bearer " + access.token;
-                    return [3 /*break*/, 8];
-                case 4: return [3 /*break*/, 8];
+                    axios.defaults.headers.common['Authorization'] = "Bearer " + access.token;
+                    return [3 /*break*/, 9];
+                case 4: return [3 /*break*/, 9];
                 case 5: return [4 /*yield*/, _refreshToken()];
                 case 6:
                     _c.sent();
-                    return [3 /*break*/, 8];
+                    return [3 /*break*/, 9];
                 case 7:
                     _refreshToken();
-                    return [3 /*break*/, 8];
-                case 8: return [3 /*break*/, 10];
-                case 9:
+                    return [3 /*break*/, 9];
+                case 8: return [3 /*break*/, 9];
+                case 9: return [3 /*break*/, 11];
+                case 10:
                     e_2 = _c.sent();
                     console.warn('_refreshTokenIfNeeded');
-                    return [3 /*break*/, 10];
-                case 10: return [2 /*return*/];
+                    return [3 /*break*/, 11];
+                case 11: return [2 /*return*/];
             }
         });
     });
@@ -165,11 +167,11 @@ function _refreshToken() {
                         throw Error();
                     }
                     if (!tokenUpdater) {
-                        tokenUpdater = refrefInstance
+                        tokenUpdater = refreshInstance
                             .post(refreshTokenURL, {
                             refresh_token: refresh.token
                         }, {
-                            baseURL: axios_1.default.defaults.baseURL
+                            baseURL: axios.defaults.baseURL
                         })
                             .then(function (res) { return __awaiter(_this, void 0, void 0, function () {
                             return __generator(this, function (_a) {
@@ -178,8 +180,7 @@ function _refreshToken() {
                                     case 1: return [2 /*return*/, _a.sent()];
                                 }
                             });
-                        }); })
-                            .catch(function (e) { return __awaiter(_this, void 0, void 0, function () {
+                        }); })["catch"](function (e) { return __awaiter(_this, void 0, void 0, function () {
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0: return [4 /*yield*/, clearCreds()];
@@ -188,8 +189,7 @@ function _refreshToken() {
                                         throw e;
                                 }
                             });
-                        }); })
-                            .finally(function () {
+                        }); })["finally"](function () {
                             tokenUpdater = null;
                         });
                     }
@@ -203,10 +203,10 @@ function saveCreds(creds) {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (!creds.access) {
+                    if (!creds.access || !creds.access.token) {
                         return [2 /*return*/];
                     }
-                    axios_1.default.defaults.headers.common['Authorization'] = "Bearer " + creds.access.token;
+                    axios.defaults.headers.common['Authorization'] = "Bearer " + creds.access.token;
                     return [4 /*yield*/, storage.setItem('creds', JSON.stringify(creds))];
                 case 1: return [2 /*return*/, _a.sent()];
             }
@@ -219,7 +219,7 @@ function clearCreds() {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    axios_1.default.defaults.headers.common['Authorization'] = "";
+                    delete axios.defaults.headers.common['Authorization'];
                     return [4 /*yield*/, storage.setItem('creds', '')];
                 case 1: return [2 /*return*/, _a.sent()];
             }
@@ -248,4 +248,3 @@ function _getCreds() {
         });
     });
 }
-exports.default = axios_1.default;
