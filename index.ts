@@ -39,13 +39,13 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
   });
 
   axios.interceptors.request.use(
-    async config => {
+    async conf => {
       await _refreshTokenIfNeeded();
       if (axios.defaults.headers.common['Authorization']){
-        config.headers['Authorization'] = axios.defaults.headers.common['Authorization'];
+        conf.headers['Authorization'] = axios.defaults.headers.common['Authorization'];
       }
 
-      return config;
+      return conf;
     },
     error => {
       return Promise.reject(error);
