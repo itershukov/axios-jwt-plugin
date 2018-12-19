@@ -41,7 +41,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
   axios.interceptors.request.use(
     async conf => {
       await _refreshTokenIfNeeded();
-      if (axios.defaults.headers.common['Authorization']){
+      if (axios.defaults.headers.common['Authorization']) {
         conf.headers['Authorization'] = axios.defaults.headers.common['Authorization'];
       }
 
