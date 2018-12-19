@@ -101,6 +101,8 @@ async function _refreshTokenIfNeeded() {
       case access.expired_at < now + PRE_REFRESH_PERIOD: // if token expired soon
         _refreshToken();
         break;
+      default:
+        break;
     }
   } catch (e) {
     console.warn('_refreshTokenIfNeeded');
