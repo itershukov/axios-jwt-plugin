@@ -71,9 +71,11 @@ function configureAxiosJWTInterseptors(config) {
                     return [2 /*return*/, conf];
             }
         });
-    }); }, function (error) {
-        return Promise.reject(error);
-    });
+    }); }, function (error) { return __awaiter(_this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            throw error;
+        });
+    }); });
     axios.interceptors.response.use(function (response) { return __awaiter(_this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             return [2 /*return*/, response];
@@ -90,7 +92,7 @@ function configureAxiosJWTInterseptors(config) {
                         error.response.data &&
                         error.response.data.code === tokenStatuses.expired;
                     if (!needRefresh) {
-                        return [2 /*return*/, Promise.reject(error)];
+                        throw error;
                     }
                     _a.label = 1;
                 case 1:
@@ -102,7 +104,7 @@ function configureAxiosJWTInterseptors(config) {
                 case 3:
                     e_1 = _a.sent();
                     console.error(e_1);
-                    return [2 /*return*/, Promise.reject(error)];
+                    throw error;
                 case 4: return [2 /*return*/];
             }
         });

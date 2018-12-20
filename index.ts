@@ -47,8 +47,8 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
 
       return conf;
     },
-    error => {
-      return Promise.reject(error);
+    async error => {
+      throw error;
     }
   );
 
@@ -66,7 +66,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
         error.response.data.code === tokenStatuses.expired;
 
       if (!needRefresh) {
-        return Promise.reject(error);
+        throw error;
       }
 
       try {
@@ -74,7 +74,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
         return axios(originalRequest);
       } catch (e) {
         console.error(e);
-        return Promise.reject(error);
+        throw error;
       }
     }
   );

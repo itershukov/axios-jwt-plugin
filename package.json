@@ -1,6 +1,6 @@
 {
   "author": "itersh",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "name": "axios-patch-jwt",
   "repository": {
     "type": "git",
@@ -8,12 +8,16 @@
   },
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --declaration index.ts"
   },
   "license": "ISC",
   "description": "",
   "dependencies": {
     "axios": "^0.18.0",
     "universal-storage": "git+https://github.com/itershukov/universal-storage.git"
+  },
+  "devDependencies": {
+    "@types/es6-promise": "^3.3.0"
   }
 }
