@@ -116,7 +116,7 @@ function _refreshTokenIfNeeded() {
         var _a, access, refresh, now, _b, e_2;
         return __generator(this, function (_c) {
             switch (_c.label) {
-                case 0: return [4 /*yield*/, _getCreds()];
+                case 0: return [4 /*yield*/, getCreds()];
                 case 1:
                     _a = _c.sent(), access = _a.access, refresh = _a.refresh;
                     if (!access || !refresh) {
@@ -162,7 +162,7 @@ function _refreshToken() {
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, _getCreds()];
+                case 0: return [4 /*yield*/, getCreds()];
                 case 1:
                     refresh = (_a.sent()).refresh;
                     if (!refresh) {
@@ -229,7 +229,7 @@ function clearCreds() {
     });
 }
 exports.clearCreds = clearCreds;
-function _getCreds() {
+function getCreds() {
     return __awaiter(this, void 0, void 0, function () {
         var credsItem, creds, e_3;
         return __generator(this, function (_a) {
@@ -243,7 +243,7 @@ function _getCreds() {
                     return [2 /*return*/, creds];
                 case 2:
                     e_3 = _a.sent();
-                    console.warn('_getCreds', e_3);
+                    console.warn('getCreds', e_3);
                     return [2 /*return*/, {}];
                 case 3: return [2 /*return*/];
             }

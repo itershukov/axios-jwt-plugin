@@ -81,7 +81,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
 }
 
 async function _refreshTokenIfNeeded() {
-  const { access, refresh } = await _getCreds();
+  const { access, refresh } = await getCreds();
 
   if (!access || !refresh) {
     return;
@@ -110,7 +110,7 @@ async function _refreshTokenIfNeeded() {
 }
 
 async function _refreshToken() {
-  const { refresh } = await _getCreds();
+  const { refresh } = await getCreds();
   if (!refresh) {
     throw Error();
   }
@@ -155,13 +155,13 @@ export async function clearCreds() {
   return await storage.setItem('creds', '');
 }
 
-async function _getCreds() {
+async function getCreds() {
   try {
     const credsItem = (await storage.getItem('creds')) || '{}';
     const creds = JSON.parse(credsItem);
     return creds;
   } catch (e) {
-    console.warn('_getCreds', e);
+    console.warn('getCreds', e);
     return {};
   }
 }
