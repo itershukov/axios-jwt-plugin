@@ -18,6 +18,19 @@
     "universal-storage": "git+https://github.com/itershukov/universal-storage.git"
   },
   "devDependencies": {
-    "@types/es6-promise": "^3.3.0"
+    "@types/es6-promise": "^3.3.0",
+    "husky": "^1.2.0",
+    "lint-staged": "^8.1.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged && yarn run build && yarn version --patch"
+    }
+  },
+  "lint-staged": {
+    "*.{tsx,jsx,ts,js,json,css,md}": [
+      "prettier --config .prettierrc.json --write src/**/*.{tsx,jsx,ts,js,json,css,md}",
+      "git add"
+    ]
   }
 }
