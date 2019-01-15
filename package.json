@@ -1,6 +1,6 @@
 {
   "author": "itersh",
-  "version": "1.0.10",
+  "version": "1.0.235",
   "name": "axios-patch-jwt",
   "repository": {
     "type": "git",
@@ -9,7 +9,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc --declaration index.ts"
+    "build": "tsc --declaration index.ts",
+    "postversion": "yarn version --patch && yarn run build"
   },
   "license": "ISC",
   "description": "",
@@ -18,18 +19,22 @@
     "universal-storage": "git+https://github.com/itershukov/universal-storage.git"
   },
   "devDependencies": {
+    "@commitlint/cli": "^7.3.2",
+    "@commitlint/config-conventional": "^7.3.1",
+    "@commitlint/format": "^7.3.1",
     "@types/es6-promise": "^3.3.0",
     "husky": "^1.2.0",
     "lint-staged": "^8.1.0"
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged && yarn run build && yarn version --patch"
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
     }
   },
   "lint-staged": {
     "*.{tsx,jsx,ts,js,json,css,md}": [
-      "prettier --config .prettierrc.json --write src/**/*.{tsx,jsx,ts,js,json,css,md}",
+      "prettier --config .prettierrc --write src/**/*.{tsx,jsx,ts,js,json,css,md}",
       "git add"
     ]
   }
