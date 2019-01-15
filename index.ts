@@ -155,7 +155,7 @@ export async function clearCreds() {
   return await storage.setItem('creds', '');
 }
 
-async function getCreds() {
+export async function getCreds() {
   try {
     const credsItem = (await storage.getItem('creds')) || '{}';
     const creds = JSON.parse(credsItem);
