@@ -1,14 +1,14 @@
 import { IAsyncStorage } from 'universal-storage';
-import {AxiosInstance, AxiosStatic} from 'axios';
+import { AxiosInstance, AxiosStatic } from 'axios';
 
-const refreshTokenURL = '/api/refresh-token';
+const defaultRefreshTokenURL = '/api/refresh-token';
 
 let tokenUpdater: Promise<any> | null = null;
 
 interface IConfig {
-  storage: IAsyncStorage,
-  axios: AxiosStatic,
-  refreshTokenURL?: string
+  storage: IAsyncStorage;
+  axios: AxiosStatic;
+  refreshTokenURL?: string;
 }
 
 enum tokenStatuses {
@@ -27,20 +27,20 @@ let storage: IAsyncStorage;
 let axios: AxiosStatic;
 
 export function configureAxiosJWTInterseptors(config: IConfig) {
-
   if (storage && axios) {
     return;
   }
 
   storage = config.storage;
   axios = config.axios;
+  const refreshTokenURL = config.refreshTokenURL || defaultRefreshTokenURL;
   refreshInstance = axios.create({
     timeout: 1000
   });
 
   axios.interceptors.request.use(
     async conf => {
-      await _refreshTokenIfNeeded();
+      await _refreshTokenIfNeeded(refreshTokenURL);
       if (axios.defaults.headers.common['Authorization']) {
         conf.headers['Authorization'] = axios.defaults.headers.common['Authorization'];
       }
@@ -70,7 +70,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
       }
 
       try {
-        await _refreshToken();
+        await _refreshToken(refreshTokenURL);
         return axios(originalRequest);
       } catch (e) {
         console.error(e);
@@ -80,7 +80,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
   );
 }
 
-async function _refreshTokenIfNeeded() {
+async function _refreshTokenIfNeeded(refreshTokenURL: string) {
   const { access, refresh } = await getCreds();
 
   if (!access || !refresh) {
@@ -96,10 +96,10 @@ async function _refreshTokenIfNeeded() {
       case refresh.expired_at < now:
         break;
       case access.expired_at < now:
-        await _refreshToken();
+        await _refreshToken(refreshTokenURL);
         break;
       case access.expired_at < now + PRE_REFRESH_PERIOD: // if token expired soon
-        _refreshToken();
+        _refreshToken(refreshTokenURL);
         break;
       default:
         break;
@@ -109,7 +109,7 @@ async function _refreshTokenIfNeeded() {
   }
 }
 
-async function _refreshToken() {
+async function _refreshToken(refreshTokenURL: string) {
   const { refresh } = await getCreds();
   if (!refresh) {
     throw Error();
@@ -165,4 +165,3 @@ export async function getCreds() {
     return {};
   }
 }
-
