@@ -2,6 +2,13 @@
 var __awaiter =
   (this && this.__awaiter) ||
   function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P
+        ? value
+        : new P(function(resolve) {
+            resolve(value);
+          });
+    }
     return new (P || (P = Promise))(function(resolve, reject) {
       function fulfilled(value) {
         try {
@@ -18,11 +25,7 @@ var __awaiter =
         }
       }
       function step(result) {
-        result.done
-          ? resolve(result.value)
-          : new P(function(resolve) {
-              resolve(result.value);
-            }).then(fulfilled, rejected);
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
       }
       step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
@@ -120,7 +123,7 @@ var __generator =
     }
   };
 exports.__esModule = true;
-var refreshTokenURL = '/api/refresh-token';
+exports.getCreds = exports.clearCreds = exports.saveCreds = exports.refreshToken = exports.configureAxiosJWTInterseptors = void 0;
 var tokenUpdater = null;
 var tokenStatuses;
 (function(tokenStatuses) {
@@ -130,10 +133,12 @@ var tokenStatuses;
   tokenStatuses[(tokenStatuses['revoked'] = 13)] = 'revoked';
   tokenStatuses[(tokenStatuses['badSignature'] = 14)] = 'badSignature';
 })(tokenStatuses || (tokenStatuses = {}));
-var PRE_REFRESH_PERIOD = 10;
+var preRefreshPeriod = 10;
 var refreshInstance;
 var storage;
 var axios;
+var convertToCamelCase;
+var globalConfig;
 function configureAxiosJWTInterseptors(config) {
   var _this = this;
   if (storage && axios) {
@@ -141,8 +146,10 @@ function configureAxiosJWTInterseptors(config) {
   }
   storage = config.storage;
   axios = config.axios;
+  convertToCamelCase = config.convertToCamelCase === undefined ? true : !!config.convertToCamelCase;
+  globalConfig = config;
   refreshInstance = axios.create({
-    timeout: 1000
+    timeout: (preRefreshPeriod / 2) * 1000
   });
   axios.interceptors.request.use(
     function(conf) {
@@ -150,7 +157,7 @@ function configureAxiosJWTInterseptors(config) {
         return __generator(this, function(_a) {
           switch (_a.label) {
             case 0:
-              return [4 /*yield*/, _refreshTokenIfNeeded()];
+              return [4 /*yield*/, refreshTokenIfNeeded(config)];
             case 1:
               _a.sent();
               if (axios.defaults.headers.common['Authorization']) {
@@ -196,7 +203,7 @@ function configureAxiosJWTInterseptors(config) {
               _a.label = 1;
             case 1:
               _a.trys.push([1, 3, , 4]);
-              return [4 /*yield*/, _refreshToken()];
+              return [4 /*yield*/, refreshToken(config)];
             case 2:
               _a.sent();
               return [2 /*return*/, axios(originalRequest)];
@@ -213,9 +220,9 @@ function configureAxiosJWTInterseptors(config) {
   );
 }
 exports.configureAxiosJWTInterseptors = configureAxiosJWTInterseptors;
-function _refreshTokenIfNeeded() {
+function refreshTokenIfNeeded(config) {
   return __awaiter(this, void 0, void 0, function() {
-    var _a, access, refresh, now, _b, e_2;
+    var _a, access, refresh, refreshCamel, accessCamel, now, _b, e_2;
     return __generator(this, function(_c) {
       switch (_c.label) {
         case 0:
@@ -225,79 +232,75 @@ function _refreshTokenIfNeeded() {
           if (!access || !refresh) {
             return [2 /*return*/];
           }
+          refreshCamel = camelCase(refresh);
+          accessCamel = camelCase(access);
+          if (!axios.defaults.headers.common['Authorization'] && access.token) {
+            axios.defaults.headers.common['Authorization'] = 'Bearer ' + access.token;
+          }
           _c.label = 2;
         case 2:
-          _c.trys.push([2, 10, , 11]);
-          now = Date.now() / 1000;
+          _c.trys.push([2, 8, , 9]);
+          now = Math.round(Date.now() / 1000);
           _b = true;
           switch (_b) {
-            case !!access.token:
+            case refreshCamel.expiredAt < now:
               return [3 /*break*/, 3];
-            case refresh.expired_at < now:
+            case accessCamel.expiredAt < now:
               return [3 /*break*/, 4];
-            case access.expired_at < now:
-              return [3 /*break*/, 5];
-            case access.expired_at < now + PRE_REFRESH_PERIOD:
-              return [3 /*break*/, 7];
+            case accessCamel.expiredAt < now + preRefreshPeriod:
+              return [3 /*break*/, 4];
           }
-          return [3 /*break*/, 8];
+          return [3 /*break*/, 6];
         case 3:
-          axios.defaults.headers.common['Authorization'] = 'Bearer ' + access.token;
-          return [3 /*break*/, 9];
-        case 4:
-          return [3 /*break*/, 9];
+          return [3 /*break*/, 7];
+        case 4: // if token expired soon
+          return [4 /*yield*/, refreshToken(config)];
         case 5:
-          return [4 /*yield*/, _refreshToken()];
-        case 6:
           _c.sent();
-          return [3 /*break*/, 9];
+          return [3 /*break*/, 7];
+        case 6:
+          return [3 /*break*/, 7];
         case 7:
-          _refreshToken();
           return [3 /*break*/, 9];
         case 8:
+          e_2 = _c.sent();
+          console.warn('refreshTokenIfNeeded');
           return [3 /*break*/, 9];
         case 9:
-          return [3 /*break*/, 11];
-        case 10:
-          e_2 = _c.sent();
-          console.warn('_refreshTokenIfNeeded');
-          return [3 /*break*/, 11];
-        case 11:
           return [2 /*return*/];
       }
     });
   });
 }
-function _refreshToken() {
+function refreshToken(config) {
   return __awaiter(this, void 0, void 0, function() {
-    var refresh;
+    var refresh, refreshTokenKey;
+    var _a;
     var _this = this;
-    return __generator(this, function(_a) {
-      switch (_a.label) {
+    return __generator(this, function(_b) {
+      switch (_b.label) {
         case 0:
           return [4 /*yield*/, getCreds()];
         case 1:
-          refresh = _a.sent().refresh;
+          refresh = _b.sent().refresh;
           if (!refresh) {
             throw Error();
           }
           if (!tokenUpdater) {
+            refreshTokenKey = convertToCamelCase ? 'refreshToken' : 'refresh_token';
+            delete refreshInstance.defaults.headers.common.Authorization;
             tokenUpdater = refreshInstance
-              .post(
-                refreshTokenURL,
-                {
-                  refresh_token: refresh.token
-                },
-                {
-                  baseURL: axios.defaults.baseURL
-                }
-              )
+              .put(config.refreshTokenEndpoint, ((_a = {}), (_a[refreshTokenKey] = refresh.token), _a), {
+                baseURL: axios.defaults.baseURL
+              })
               .then(function(res) {
                 return __awaiter(_this, void 0, void 0, function() {
+                  var creds;
                   return __generator(this, function(_a) {
                     switch (_a.label) {
                       case 0:
-                        return [4 /*yield*/, saveCreds(res.data.data)];
+                        creds = _getCredsFromRes(res, config);
+                        return [4 /*yield*/, saveCreds(creds)];
                       case 1:
                         return [2 /*return*/, _a.sent()];
                     }
@@ -309,9 +312,12 @@ function _refreshToken() {
                   return __generator(this, function(_a) {
                     switch (_a.label) {
                       case 0:
+                        if (!(e && e.status === 401)) return [3 /*break*/, 2];
                         return [4 /*yield*/, clearCreds()];
                       case 1:
                         _a.sent();
+                        _a.label = 2;
+                      case 2:
                         throw e;
                     }
                   });
@@ -326,8 +332,10 @@ function _refreshToken() {
     });
   });
 }
+exports.refreshToken = refreshToken;
 function saveCreds(creds) {
   return __awaiter(this, void 0, void 0, function() {
+    var preparedCreds;
     return __generator(this, function(_a) {
       switch (_a.label) {
         case 0:
@@ -335,7 +343,9 @@ function saveCreds(creds) {
             return [2 /*return*/];
           }
           axios.defaults.headers.common['Authorization'] = 'Bearer ' + creds.access.token;
-          return [4 /*yield*/, storage.setItem('creds', JSON.stringify(creds))];
+          preparedCreds = convertToCamelCase ? camelCase(creds) : creds;
+          globalConfig && globalConfig.onSaveCreds && globalConfig.onSaveCreds(preparedCreds);
+          return [4 /*yield*/, storage.setItem('creds', JSON.stringify(preparedCreds))];
         case 1:
           return [2 /*return*/, _a.sent()];
       }
@@ -345,13 +355,22 @@ function saveCreds(creds) {
 exports.saveCreds = saveCreds;
 function clearCreds() {
   return __awaiter(this, void 0, void 0, function() {
+    var e_3;
     return __generator(this, function(_a) {
       switch (_a.label) {
         case 0:
+          _a.trys.push([0, 2, , 3]);
           delete axios.defaults.headers.common['Authorization'];
+          globalConfig && globalConfig.onClearCreds && globalConfig.onClearCreds();
           return [4 /*yield*/, storage.setItem('creds', '')];
         case 1:
           return [2 /*return*/, _a.sent()];
+        case 2:
+          e_3 = _a.sent();
+          console.warn('Error at clearCreds method!', e_3);
+          return [2 /*return*/];
+        case 3:
+          return [2 /*return*/];
       }
     });
   });
@@ -359,24 +378,58 @@ function clearCreds() {
 exports.clearCreds = clearCreds;
 function getCreds() {
   return __awaiter(this, void 0, void 0, function() {
-    var credsItem, creds, e_3;
-    return __generator(this, function(_a) {
-      switch (_a.label) {
+    var credsItem, _a, creds, e_4;
+    return __generator(this, function(_b) {
+      switch (_b.label) {
         case 0:
-          _a.trys.push([0, 2, , 3]);
+          _b.trys.push([0, 3, , 4]);
+          _a = storage;
+          if (!_a) return [3 /*break*/, 2];
           return [4 /*yield*/, storage.getItem('creds')];
         case 1:
-          credsItem = _a.sent() || '{}';
-          creds = JSON.parse(credsItem);
-          return [2 /*return*/, creds];
+          _a = _b.sent();
+          _b.label = 2;
         case 2:
-          e_3 = _a.sent();
-          console.warn('getCreds', e_3);
-          return [2 /*return*/, {}];
+          credsItem = _a || '{}';
+          creds = JSON.parse(credsItem);
+          globalConfig && globalConfig.onGetCreds && globalConfig.onGetCreds(creds);
+          return [2 /*return*/, creds];
         case 3:
+          e_4 = _b.sent();
+          console.warn('Error at getCreds method!', e_4);
+          return [2 /*return*/, {}];
+        case 4:
           return [2 /*return*/];
       }
     });
   });
 }
 exports.getCreds = getCreds;
+function camelCase(obj) {
+  var newObj = {};
+  for (var d in obj) {
+    if (obj.hasOwnProperty(d)) {
+      var newKey = d.replace(/(\_\w)/g, function(m) {
+        return m[1].toUpperCase();
+      });
+      newObj[newKey] = obj[d];
+    }
+  }
+  return newObj;
+}
+function _getCredsFromRes(res, config) {
+  if (config.getCredsFromRefreshResponse) {
+    var result = config.getCredsFromRefreshResponse(res);
+    if (result.access) {
+      return result;
+    }
+    throw new Error('Function getCredsFromRefreshResponse wrong implemented. It should return data compatible with ICreds.');
+  }
+  if (res.data.access) {
+    return res.data;
+  }
+  if (res.data.data.access) {
+    return res.data.data;
+  }
+  throw new Error("Can't parse response to get tokens");
+}
