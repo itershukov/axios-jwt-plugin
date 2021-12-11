@@ -100,14 +100,6 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
 }
 
 async function refreshTokenIfNeeded(config: IConfig) {
-  const refreshingInProcessRaw = await storage.getItem('credsBlocker');
-  const refreshingInProcess = JSON.parse(refreshingInProcessRaw ? refreshingInProcessRaw : 'false');
-  if (refreshingInProcess) {
-    // Needed for blocking all tabs while token updating in process
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return refreshTokenIfNeeded(config);
-  }
-
   const { access, refresh } = await getCreds();
 
   if (!access || !refresh) {
@@ -139,6 +131,14 @@ async function refreshTokenIfNeeded(config: IConfig) {
 }
 
 export async function refreshToken(config: IConfig) {
+  const refreshingInProcessRaw = await storage.getItem('credsBlocker');
+  const refreshingInProcess = JSON.parse(refreshingInProcessRaw ? refreshingInProcessRaw : 'false');
+  if (refreshingInProcess) {
+    // Needed for blocking all tabs while token updating in process
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return await refreshToken(config);
+  }
+
   const { refresh } = await getCreds();
   if (!refresh) {
     throw Error();
