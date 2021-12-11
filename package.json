@@ -1,6 +1,6 @@
 {
   "name": "axios-patch-jwt",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "description": "Wrapper for axios library using JWT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -89,7 +89,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
       }
 
       try {
-        await refreshTokenIfNeeded(config);
+        await refreshToken(config);
         return axios(originalRequest);
       } catch (e) {
         console.error(e);
