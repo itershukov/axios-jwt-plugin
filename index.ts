@@ -89,7 +89,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
       }
 
       try {
-        await refreshToken(config);
+        await refreshTokenIfNeeded(config);
         return axios(originalRequest);
       } catch (e) {
         console.error(e);
@@ -100,6 +100,14 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
 }
 
 async function refreshTokenIfNeeded(config: IConfig) {
+  const refreshingInProcessRaw = await storage.getItem('credsBlocker');
+  const refreshingInProcess = JSON.parse(refreshingInProcessRaw ? refreshingInProcessRaw : 'false');
+  if (refreshingInProcess) {
+    // Needed for blocking all tabs while token updating in process
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return refreshTokenIfNeeded(config);
+  }
+
   const { access, refresh } = await getCreds();
 
   if (!access || !refresh) {
@@ -137,6 +145,7 @@ export async function refreshToken(config: IConfig) {
   }
 
   if (!tokenUpdater) {
+    await storage.setItem('credsBlocker', JSON.stringify(true));
     const refreshTokenKey = convertToCamelCase ? 'refreshToken' : 'refresh_token';
     delete refreshInstance.defaults.headers.common.Authorization;
 
@@ -176,24 +185,30 @@ export async function saveCreds(creds: ICreds) {
   axios.defaults.headers.common['Authorization'] = `Bearer ${creds.access.token}`;
   const preparedCreds = convertToCamelCase ? camelCase(creds) : creds;
   globalConfig && globalConfig.onSaveCreds && globalConfig.onSaveCreds(preparedCreds);
-  return await storage.setItem('creds', JSON.stringify(preparedCreds));
+
+  const credsSetter = await storage.setItem('creds', JSON.stringify(preparedCreds));
+  await storage.setItem('credsBlocker', '');
+  return credsSetter;
 }
 
 export async function clearCreds() {
   try {
     delete axios.defaults.headers.common['Authorization'];
     globalConfig && globalConfig.onClearCreds && globalConfig.onClearCreds();
-    return await storage.setItem('creds', '');
+    const credsSetter = await storage.setItem('creds', '');
+    await storage.setItem('credsBlocker', '');
+    return credsSetter;
   } catch (e) {
     console.warn('Error at clearCreds method!', e);
+    await storage.setItem('credsBlocker', '');
     return;
   }
 }
 
 export async function getCreds() {
   try {
-    const credsItem = (storage && (await storage.getItem('creds'))) || '{}';
-    const creds = JSON.parse(credsItem);
+    const credsItem = storage && (await storage.getItem('creds'));
+    const creds = JSON.parse(credsItem ? credsItem : '{}');
 
     globalConfig && globalConfig.onGetCreds && globalConfig.onGetCreds(creds);
     return creds;
