@@ -85,6 +85,15 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
         error.response.data.code === tokenStatuses.expired;
 
       if (!needRefresh) {
+        const {access} = await getCreds();
+        // If other tab already update the tokens we shouldnt clear them
+        const refreshHappens = error && error.status === 401 &&
+          access && access.token && originalRequest.headers['Authorization'] !== `Bearer ${access.token}`
+
+        if (refreshHappens){
+          return axios(originalRequest);
+        }
+
         throw error;
       }
 
@@ -109,7 +118,7 @@ async function refreshTokenIfNeeded(config: IConfig) {
   const refreshCamel = camelCase(refresh);
   const accessCamel = camelCase(access);
 
-  if (!axios.defaults.headers.common['Authorization'] && access.token) {
+  if (access.token) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${access.token}`;
   }
 
@@ -164,6 +173,12 @@ export async function refreshToken(config: IConfig) {
         return await saveCreds(creds);
       })
       .catch(async e => {
+        const { refresh: currentRefresh } = await getCreds();
+        // If other tab already update the tokens we shouldnt clear them
+        if (e && e.status === 401 && currentRefresh && currentRefresh.token !== refresh.token){
+          return;
+        }
+
         if (e && e.status === 401) {
           await clearCreds();
         }
