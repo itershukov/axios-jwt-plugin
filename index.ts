@@ -78,11 +78,12 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
     async error => {
       // const tryIndex = Math.round(Math.random()*10000)
       const originalRequest = error.config;
-      const creds = await getCreds();
+      const { access, refresh } = await getCreds();
+      const haveCreds = access && refresh;
       // console.log('originalRequest.tryCount', originalRequest.params, error.response)
       const tryCount = originalRequest.params?.tryCount || 0;
 
-      const needRefresh = error && error.response && error.response.status === 401 && tryCount < 3 && creds;
+      const needRefresh = haveCreds && error && error.response && error.response.status === 401 && tryCount < 3;
 
       if (!needRefresh) {
         // console.log('before refreshToken CLEAR CREDS', error, error.response, config)
