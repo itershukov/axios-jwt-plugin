@@ -1,12 +1,12 @@
 {
   "name": "axios-patch-jwt",
-  "version": "3.3.3",
+  "version": "3.3.23",
   "description": "Wrapper for axios library using JWT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "rm -rf ./dist && tsc --declaration",
-    "prepublishOnly": "git push && yarn build"
+    "prepublishOnly": "npm version patch && git push && yarn build"
   },
   "author": {
     "name": "itersh",

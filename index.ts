@@ -26,13 +26,13 @@ export interface Token {
   expiredAt: number;
 }
 
-enum tokenStatuses {
-  expired = 10,
-  bad = 11,
-  incorrect = 12,
-  revoked = 13,
-  badSignature = 14
-}
+// enum tokenStatuses {
+//   expired = 10,
+//   bad = 11,
+//   incorrect = 12,
+//   revoked = 13,
+//   badSignature = 14
+// }
 
 const preRefreshPeriod = 10;
 
@@ -54,7 +54,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
   globalConfig = config;
 
   refreshInstance = axios.create({
-    timeout: (preRefreshPeriod / 2) * 1000
+    timeout: (preRefreshPeriod / 2) * 10 * 1000
   });
 
   axios.interceptors.request.use(
@@ -67,7 +67,7 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
       return conf;
     },
     async error => {
-      throw error;
+      return Promise.reject(error);
     }
   );
 
@@ -76,33 +76,32 @@ export function configureAxiosJWTInterseptors(config: IConfig) {
       return response;
     },
     async error => {
+      // const tryIndex = Math.round(Math.random()*10000)
       const originalRequest = error.config;
-      const needRefresh =
-        error &&
-        error.response &&
-        error.response.status === 401 &&
-        error.response.data &&
-        error.response.data.code === tokenStatuses.expired;
+      const creds = await getCreds();
+      // console.log('originalRequest.tryCount', originalRequest.params, error.response)
+      const tryCount = originalRequest.params?.tryCount || 0;
+
+      const needRefresh = error && error.response && error.response.status === 401 && tryCount < 3 && creds;
 
       if (!needRefresh) {
-        const {access} = await getCreds();
-        // If other tab already update the tokens we shouldnt clear them
-        const refreshHappens = error && error.status === 401 &&
-          access && access.token && originalRequest.headers['Authorization'] !== `Bearer ${access.token}`
-
-        if (refreshHappens){
-          return axios(originalRequest);
-        }
-
-        throw error;
+        // console.log('before refreshToken CLEAR CREDS', error, error.response, config)
+        // await clearCreds();
+        return Promise.reject(error);
       }
 
       try {
-        await refreshToken(config);
+        // console.log('before refreshToken', tryIndex, config)
+        if (!originalRequest.params) {
+          originalRequest.params = {};
+        }
+        originalRequest.params.tryCount = tryCount + 1;
+        await new Promise(resolve => setTimeout(resolve, 300 * tryCount));
+        // await refreshToken(config); // Needed to throw 401 on auth point and catch it in local catch handler
         return axios(originalRequest);
       } catch (e) {
-        console.error(e);
-        throw error;
+        console.error('refresh axios catch', e);
+        return Promise.reject(error);
       }
     }
   );
@@ -135,26 +134,22 @@ async function refreshTokenIfNeeded(config: IConfig) {
         break;
     }
   } catch (e) {
-    console.warn('refreshTokenIfNeeded');
+    console.warn('refreshTokenIfNeeded', e);
   }
 }
 
 export async function refreshToken(config: IConfig) {
-  const refreshingInProcessRaw = await storage.getItem('credsBlocker');
-  const refreshingInProcess = JSON.parse(refreshingInProcessRaw ? refreshingInProcessRaw : 'false');
-  if (refreshingInProcess) {
-    // Needed for blocking all tabs while token updating in process
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return await refreshToken(config);
-  }
+  // const tryIndex = Math.round(Math.random()*10000)
+  // console.log('Start refreshing', tryIndex, config)
 
   const { refresh } = await getCreds();
   if (!refresh) {
-    throw Error();
+    // console.log('Refresh is empty', tryIndex, config)
+    throw Error('Refresh not found in refreshToken');
   }
 
   if (!tokenUpdater) {
-    await storage.setItem('credsBlocker', JSON.stringify(true));
+    // console.log('!tokenUpdater', Date.now(), tryIndex, tokenUpdater, config)
     const refreshTokenKey = convertToCamelCase ? 'refreshToken' : 'refresh_token';
     delete refreshInstance.defaults.headers.common.Authorization;
 
@@ -169,22 +164,16 @@ export async function refreshToken(config: IConfig) {
         }
       )
       .then(async res => {
+        // console.log('!tokenUpdater Success', tryIndex, config)
         const creds = _getCredsFromRes(res, config);
         return await saveCreds(creds);
       })
-      .catch(async e => {
-        const { refresh: currentRefresh } = await getCreds();
-        // If other tab already update the tokens we shouldnt clear them
-        if (e && e.status === 401 && currentRefresh && currentRefresh.token !== refresh.token){
-          return;
-        }
-
-        if (e && e.status === 401) {
-          await clearCreds();
-        }
+      .catch(e => {
+        // console.log('!tokenUpdater Fail', tryIndex, config, e);
         throw e;
       })
-      .finally(() => {
+      .finally(async () => {
+        // console.log('!tokenUpdater Release updater', tryIndex, config)
         tokenUpdater = null;
       });
   }
@@ -201,22 +190,16 @@ export async function saveCreds(creds: ICreds) {
   const preparedCreds = convertToCamelCase ? camelCase(creds) : creds;
   globalConfig && globalConfig.onSaveCreds && globalConfig.onSaveCreds(preparedCreds);
 
-  const credsSetter = await storage.setItem('creds', JSON.stringify(preparedCreds));
-  await storage.setItem('credsBlocker', '');
-  return credsSetter;
+  return await storage.setItem('creds', JSON.stringify(preparedCreds));
 }
 
 export async function clearCreds() {
   try {
     delete axios.defaults.headers.common['Authorization'];
     globalConfig && globalConfig.onClearCreds && globalConfig.onClearCreds();
-    const credsSetter = await storage.setItem('creds', '');
-    await storage.setItem('credsBlocker', '');
-    return credsSetter;
+    return await storage.setItem('creds', '');
   } catch (e) {
     console.warn('Error at clearCreds method!', e);
-    await storage.setItem('credsBlocker', '');
-    return;
   }
 }
 
